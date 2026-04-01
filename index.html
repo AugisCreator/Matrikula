@@ -145,7 +145,7 @@
     <div class="input-group">
       <label>Detalė</label>
       <div class="input-row">
-        <input type="number" id="plotis" class="wide" value="200" min="0" step="any" oninput="calc()" />
+        <input type="number" id="plotis" class="wide" min="0" step="any" oninput="calc()" />
         <span class="unit">mm</span>
       </div>
     </div>
@@ -166,7 +166,7 @@
     <div class="input-group">
       <label>Peilių sk.</label>
       <div class="input-row">
-        <input type="number" id="peiliai" value="4" min="1" max="20" step="1" oninput="onPeiliaiChange()" />
+        <input type="number" id="peiliai" value="4" min="2" max="20" step="1" oninput="onPeiliaiChange()" />
         <span class="unit">vnt.</span>
       </div>
     </div>
@@ -206,7 +206,7 @@
 
   function getBP() {
     const v = parseInt(document.getElementById('peiliai').value, 10);
-    return (!isNaN(v) && v >= 1) ? v : 0;
+    return (!isNaN(v) && v >= 2) ? v : 0;
   }
 
   function onPeiliaiChange() {

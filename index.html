@@ -227,7 +227,7 @@
 
   function edgePx(likutis) {
     // width needed for edge label, e.g. "13.5" → ~36px
-    return Math.max(likutis.toFixed(1).length * 8 + 8, 28);
+    return Math.max(likutis.toFixed(2).length * 8 + 8, 28);
   }
 
   function minFullWidthPx(total, likutis) {
@@ -254,7 +254,7 @@
   }
 
   function edgeSeg(likutis) {
-    return likutis > 0 ? seg('#2980b9','white', likutis.toFixed(1), Math.max(likutis,5)) : '';
+    return likutis > 0 ? seg('#2980b9','white', likutis.toFixed(2), Math.max(likutis,5)) : '';
   }
 
   // ── main schema renderer ──────────────────────────────────────────
@@ -418,7 +418,7 @@
       errorBox.style.display='block'; return;
     }
     if (tooWide) {
-      errorBox.innerHTML=`<strong>⚠️ Per platu!</strong> Išfrezuojama <strong>${milled}mm</strong>, o detalė tik <strong>${w}mm</strong>. Viršijama <strong>${(milled-w).toFixed(1)}mm</strong>.`;
+      errorBox.innerHTML=`<strong>⚠️ Per platu!</strong> Išfrezuojama <strong>${milled}mm</strong>, o detalė tik <strong>${w}mm</strong>. Viršijama <strong>${(milled-w).toFixed(2)}mm</strong>.`;
       errorBox.style.display='block'; return;
     }
 
@@ -439,8 +439,8 @@
 
     const bgStr=Array.from({length:total},(_,i)=>i<total-1?`${b}+${g}+`:`${b}`).join('');
     formulaEl.innerHTML=`<strong>Skaičiavimas:</strong><br>
-      ${likutis.toFixed(1)}  +  ${bgStr}  +  ${likutis.toFixed(1)}<br>
-      <span style="color:#555">Išfrezuota: ${milled}mm &nbsp;|&nbsp; Likutis iš viso: ${(w-milled).toFixed(1)}mm</span><br>
+      ${likutis.toFixed(2)}  +  ${bgStr}  +  ${likutis.toFixed(2)}<br>
+      <span style="color:#555">Išfrezuota: ${milled}mm &nbsp;|&nbsp; Likutis iš viso: ${(w-milled).toFixed(2)}mm</span><br>
       = <strong>${w}mm</strong>`;
   }
 

@@ -48,8 +48,12 @@
       border-radius: 8px; border: 2px solid #ccc; outline: none;
       transition: border-color 0.2s;
     }
+    .input-row input.wide { width: 115px; }
     .input-row input:focus { border-color: #2980b9; }
     .input-row .unit { font-size: 14px; color: #777; }
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
 
     .correction-group { display: flex; flex-direction: column; gap: 4px; }
     .correction-group label { font-size: 13px; font-weight: bold; color: #444; }
@@ -139,15 +143,21 @@
 
   <div class="inputs">
     <div class="input-group">
-      <label>Detalės plotis</label>
+      <label>Detalė</label>
       <div class="input-row">
-        <input type="number" id="plotis" placeholder="pvz. 100" min="0" step="any" oninput="calc()" />
+        <input type="number" id="plotis" class="wide" placeholder="pvz. 100" min="0" step="any" oninput="calc()" />
         <span class="unit">mm</span>
       </div>
     </div>
     <div class="divider"></div>
     <div class="input-group">
-      <label>Griovelio plotis</label>
+      <label>Peilių sk.</label>
+      <div class="input-row">
+        <input type="number" id="peiliai" value="4" min="1" max="20" step="1" oninput="onPeiliaiChange()" />
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Griovelis</label>
       <div class="input-row">
         <input type="number" id="blade" value="5" min="0.1" step="any" oninput="calc()" />
         <span class="unit">mm</span>
@@ -190,10 +200,24 @@
 </div>
 
 <script>
-  const BP = 4;
+  // BP is now read from input
   let correction = 0;
   let lastRenderData = null;
   let roObserver = null;
+
+  function getBP() {
+    const v = parseInt(document.getElementById('peiliai').value, 10);
+    return (!isNaN(v) && v >= 1) ? v : 4;
+  }
+
+  function onPeiliaiChange() {
+    const bp = getBP();
+    // clamp correction to new valid range
+    correction = Math.max(-(bp-1), Math.min(bp-1, correction));
+    const v = correction;
+    document.getElementById('corr-display').textContent = v===0?'0':(v>0?'+'+v:''+v);
+    calc();
+  }
 
   // ── pixel budget helpers ──────────────────────────────────────────
   // Minimum px each segment type needs to be legible
@@ -216,10 +240,13 @@
     return `<div class="seg" style="background:${bg};color:${fg};flex:${Math.max(flex,1)}">${label}</div>`;
   }
 
-  function bladeSegs(start, end, fullPassBlades, b, g, leadGap) {
+  function bladeSegs(start, end, fullPassBlades, b, g, leadGap, bp) {
     let h = '';
     for (let i = start; i < end; i++) {
-      if (i > start || leadGap) h += seg('#ecf0f1','#444', g, g);
+      if (i > start || leadGap) {
+        const betweenPasses = i % bp === 0;
+        h += seg(betweenPasses ? '#85c1e9' : '#ecf0f1', '#333', g, g);
+      }
       const ex = i >= fullPassBlades;
       h += seg(ex ? '#922b21' : '#c0392b', 'white', b, b);
     }
@@ -244,7 +271,10 @@
       // ── FULL view ──
       let h = edgeSeg(likutis);
       for (let i = 0; i < total; i++) {
-        if (i > 0) h += seg('#ecf0f1','#444', g, g);
+        if (i > 0) {
+          const betweenPasses = i % data.bp === 0;
+          h += seg(betweenPasses ? '#85c1e9' : '#ecf0f1', '#333', g, g);
+        }
         const ex = i >= fullPassBlades;
         h += seg(ex?'#922b21':'#c0392b','white', b, b);
       }
@@ -253,14 +283,14 @@
 
     } else {
       // ── TRUNCATED view: 1 full pass each side ──
-      const leftEnd    = Math.min(BP, total);
-      const rightStart = Math.max(total - BP, leftEnd);
+      const leftEnd    = Math.min(data.bp, total);
+      const rightStart = Math.max(total - data.bp, leftEnd);
 
       // Left half: edge + first pass (no trailing gap — dots separator handles it)
-      let leftH = edgeSeg(likutis) + bladeSegs(0, leftEnd, fullPassBlades, b, g, false);
+      let leftH = edgeSeg(likutis) + bladeSegs(0, leftEnd, fullPassBlades, b, g, false, data.bp);
 
       // Right half: last pass + edge (no leading gap — dots handles it)
-      let rightH = bladeSegs(rightStart, total, fullPassBlades, b, g, false) + edgeSeg(likutis);
+      let rightH = bladeSegs(rightStart, total, fullPassBlades, b, g, false, data.bp) + edgeSeg(likutis);
 
       container.innerHTML = `
         <div class="schema-bar">
@@ -283,7 +313,7 @@
   }
 
   // ── utility ──────────────────────────────────────────────────────
-  function calcN(w,b,g) { return Math.floor((w+g)/(BP*(b+g))); }
+  function calcN(w,b,g,bp) { return Math.floor((w+g)/(bp*(b+g))); }
   function milledW(total,b,g) { return total<=0 ? 0 : total*b+(total-1)*g; }
 
   function statHTML(val,unit,label,color) {
@@ -293,17 +323,18 @@
   }
 
   function updateButtons(n) {
-    document.getElementById('btn-minus').disabled = correction<=-3 || (BP*n+correction)<=BP;
-    document.getElementById('btn-plus').disabled  = correction>=3;
+    const bp=getBP(); document.getElementById('btn-minus').disabled = correction<=-(bp-1) || (bp*n+correction)<=bp;
+    document.getElementById('btn-plus').disabled  = correction>=(bp-1);
   }
 
   function changeCorr(delta) {
     const w=parseFloat(document.getElementById('plotis').value);
     const b=parseFloat(document.getElementById('blade').value);
     const g=parseFloat(document.getElementById('gap').value);
-    const n=(!isNaN(w)&&!isNaN(b)&&!isNaN(g))?calcN(w,b,g):0;
-    if (BP*n+correction+delta < BP) return;
-    correction = Math.max(-3, Math.min(3, correction+delta));
+    const bp=getBP();
+    const n=(!isNaN(w)&&!isNaN(b)&&!isNaN(g))?calcN(w,b,g,bp):0;
+    if (bp*n+correction+delta < bp) return;
+    correction = Math.max(-(bp-1), Math.min(bp-1, correction+delta));
     const v = correction;
     document.getElementById('corr-display').textContent = v===0?'0':(v>0?'+'+v:''+v);
     calc();
@@ -333,17 +364,18 @@
 
     res.classList.add('visible');
 
-    const n      = calcN(w,b,g);
-    const total  = BP*n+correction;
+    const bp     = getBP();
+    const n      = calcN(w,b,g,bp);
+    const total  = bp*n+correction;
     const milled = milledW(total,b,g);
     const tooWide = milled>w;
-    const tooFew  = total<BP;
+    const tooFew  = total<bp;
     const likutis = (!tooWide&&!tooFew) ? (w-milled)/2 : null;
 
-    updateButtons(n);
+    updateButtons(n); // uses getBP() internally
 
     const dPasses = correction>=0 ? n     : n-1;
-    const dLines  = correction>=0 ? correction : BP+correction;
+    const dLines  = correction>=0 ? correction : bp+correction;
 
     if (n>0) {
       const txt = correction===0
@@ -366,7 +398,7 @@
       );
 
     if (tooFew) {
-      errorBox.innerHTML=`<strong>⚠️ Per maža korekcija!</strong> Minimalus — <strong>1 pilnas prafrezavimas (${BP} grioveliai)</strong>. Sumažink korekciją.`;
+      errorBox.innerHTML=`<strong>⚠️ Per maža korekcija!</strong> Minimalus — <strong>1 pilnas prafrezavimas (${bp} grioveliai)</strong>. Sumažink korekciją.`;
       errorBox.style.display='block'; return;
     }
     if (tooWide) {
@@ -376,16 +408,17 @@
 
     schWrap.style.display='block';
 
-    const fullPassBlades = BP*(correction>=0?n:n-1);
-    lastRenderData = { total, fullPassBlades, b, g, likutis };
+    const fullPassBlades = bp*(correction>=0?n:n-1);
+    lastRenderData = { total, fullPassBlades, b, g, likutis, bp };
     renderSchema(lastRenderData);
     attachObserver(); // attach after schema-anchor is visible
 
     // Legend
     let leg=`<span><span class="legend-dot" style="background:#c0392b;color:white">■</span> Griovelis – pilnas prafrezavimas (${b}mm)</span>`;
     if (dLines>0) leg+=`<span><span class="legend-dot" style="background:#922b21;color:white">■</span> Griovelis – papildoma linija (${b}mm)</span>`;
-    leg+=`<span><span class="legend-dot" style="background:#ecf0f1;border:1px solid #bbb">■</span> Tarpas (${g}mm)</span>
-          <span><span class="legend-dot" style="background:#2980b9;color:white">■</span> Likutis</span>`;
+    leg+=`<span><span class="legend-dot" style="background:#ecf0f1;border:1px solid #bbb">■</span> Tarpas (${g}mm)</span>`;
+    if (dPasses>1) leg+=`<span><span class="legend-dot" style="background:#85c1e9">■</span> Tarpas tarp prafrezavimų (${g}mm)</span>`;
+    leg+=`<span><span class="legend-dot" style="background:#2980b9;color:white">■</span> Likutis</span>`;
     legendEl.innerHTML=leg;
 
     const bgStr=Array.from({length:total},(_,i)=>i<total-1?`${b}+${g}+`:`${b}`).join('');

@@ -2,10 +2,10 @@
 <html lang="lt">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Frezavimo skaičiuoklė</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
 
     body {
       font-family: sans-serif;
@@ -150,12 +150,6 @@
       </div>
     </div>
     <div class="input-group">
-      <label>Peilių sk.</label>
-      <div class="input-row">
-        <input type="number" id="peiliai" value="4" min="1" max="20" step="1" oninput="onPeiliaiChange()" />
-      </div>
-    </div>
-    <div class="input-group">
       <label>Griovelis</label>
       <div class="input-row">
         <input type="number" id="blade" value="5" min="0.1" step="any" oninput="calc()" />
@@ -169,7 +163,14 @@
         <span class="unit">mm</span>
       </div>
     </div>
-    <div class="correction-group">
+    <div class="input-group">
+      <label>Peilių sk.</label>
+      <div class="input-row">
+        <input type="number" id="peiliai" value="4" min="1" max="20" step="1" oninput="onPeiliaiChange()" />
+        <span class="unit">vnt.</span>
+      </div>
+    </div>
+    <div class="correction-group" style="margin-left:auto">
       <label>Korekcija</label>
       <span class="hint">− didina likutį &nbsp;|&nbsp; + mažina likutį</span>
       <div class="correction-buttons">

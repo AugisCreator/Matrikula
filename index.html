@@ -128,7 +128,7 @@
 
     .error {
       background: #fdecea; border: 2px solid #c0392b;
-      color: #922b21; padding: 16px; border-radius: 10px;
+      color: #6e1a10; padding: 16px; border-radius: 10px;
       font-size: 14px; line-height: 1.6; margin-bottom: 8px;
     }
 
@@ -206,15 +206,16 @@
 
   function getBP() {
     const v = parseInt(document.getElementById('peiliai').value, 10);
-    return (!isNaN(v) && v >= 1) ? v : 4;
+    return (!isNaN(v) && v >= 1) ? v : 0;
   }
 
   function onPeiliaiChange() {
     const bp = getBP();
-    // clamp correction to new valid range
-    correction = Math.max(-(bp-1), Math.min(bp-1, correction));
-    const v = correction;
-    document.getElementById('corr-display').textContent = v===0?'0':(v>0?'+'+v:''+v);
+    if (bp >= 1) {
+      correction = Math.max(-(bp-1), Math.min(bp-1, correction));
+      const v = correction;
+      document.getElementById('corr-display').textContent = v===0?'0':(v>0?'+'+v:''+v);
+    }
     calc();
   }
 
@@ -247,7 +248,7 @@
         h += seg(betweenPasses ? '#85c1e9' : '#ecf0f1', '#333', g, g);
       }
       const ex = i >= fullPassBlades;
-      h += seg(ex ? '#922b21' : '#c0392b', 'white', b, b);
+      h += seg(ex ? '#6e1a10' : '#c0392b', 'white', b, b);
     }
     return h;
   }
@@ -275,7 +276,7 @@
           h += seg(betweenPasses ? '#85c1e9' : '#ecf0f1', '#333', g, g);
         }
         const ex = i >= fullPassBlades;
-        h += seg(ex?'#922b21':'#c0392b','white', b, b);
+        h += seg(ex?'#6e1a10':'#c0392b','white', b, b);
       }
       h += edgeSeg(likutis);
       container.innerHTML = `<div class="schema-bar">${h}</div>`;
@@ -359,11 +360,23 @@
     schWrap.style.display='none';
     lastRenderData = null;
 
-    // Update subtitle
+    // Subtitle update
     const subEl = document.getElementById('subtitle');
-    if (subEl) subEl.textContent = `Freza: ${getBP()} peiliai | Prafrezavimai jungiami tarpu | Min. 1 pilnas prafrezavimas`;
+    const bpSub = getBP(); if (subEl) subEl.textContent = bpSub >= 1 ? `Freza: ${bpSub} peiliai | Prafrezavimai jungiami tarpu | Min. 1 pilnas prafrezavimas` : 'Freza — peiliai';
 
-    if (isNaN(w)||w<=0||isNaN(b)||b<=0||isNaN(g)||g<=0) return;
+    // Named field validation
+    const missing = [];
+    if (isNaN(w)||w<=0) missing.push('Detalė — įveskite detalės plotį.');
+    if (isNaN(b)||b<=0) missing.push('Griovelis — įveskite frezos storį.');
+    if (isNaN(g)||g<=0) missing.push('Tarpas — įveskite tarpą tarp frezų.');
+    const bp0 = getBP(); if (bp0<1) missing.push('Peilių sk. — įveskite peilių skaičių.');
+    if (missing.length > 0) {
+      res.classList.add('visible');
+      statsEl.innerHTML = '';
+      errorBox.innerHTML = missing.map(m=>`⚠️ ${m}`).join('<br>');
+      errorBox.style.display='block';
+      return;
+    }
 
     res.classList.add('visible');
 
@@ -382,10 +395,10 @@
 
     if (n>0) {
       const txt = correction===0
-        ? `<strong>${dPasses}</strong> pilni prafrezavimai, be papildomų linijų`
+        ? `Pilni prafrezavimai: <strong>${dPasses}</strong>, be papildomų linijų`
         : correction>0
-          ? `<strong>${dPasses}</strong> pilni prafrezavimai + <strong>${dLines}</strong> papildomos linijos`
-          : `Atimamas 1 prafrezavimas → <strong>${dPasses}</strong> pilni prafrezavimai + <strong>${dLines}</strong> papildomos linijos`;
+          ? `Pilni prafrezavimai: <strong>${dPasses}</strong> + papildomos linijos: <strong>${dLines}</strong>`
+          : `Atimama prafrezavimų: <strong>1</strong> → pilni prafrezavimai: <strong>${dPasses}</strong>, papildomos linijos: <strong>${dLines}</strong>`;
       infoStrip.innerHTML=`ℹ️ ${txt}`;
       infoStrip.classList.add('visible');
     }
@@ -405,7 +418,7 @@
       errorBox.style.display='block'; return;
     }
     if (tooWide) {
-      errorBox.innerHTML=`<strong>⚠️ Per platu!</strong> Išfrezuojama <strong>${milled}mm</strong>, o detalė tik <strong>${w}mm</strong>. Viršijama per <strong>${(milled-w).toFixed(1)}mm</strong>.`;
+      errorBox.innerHTML=`<strong>⚠️ Per platu!</strong> Išfrezuojama <strong>${milled}mm</strong>, o detalė tik <strong>${w}mm</strong>. Viršijama <strong>${(milled-w).toFixed(1)}mm</strong>.`;
       errorBox.style.display='block'; return;
     }
 
@@ -418,14 +431,14 @@
 
     // Legend
     let leg=`<span><span class="legend-dot" style="background:#c0392b;color:white">■</span> Griovelis – pilnas prafrezavimas (${b}mm)</span>`;
-    if (dLines>0) leg+=`<span><span class="legend-dot" style="background:#922b21;color:white">■</span> Griovelis – papildoma linija (${b}mm)</span>`;
+    if (dLines>0) leg+=`<span><span class="legend-dot" style="background:#6e1a10;color:white">■</span> Griovelis – papildoma linija (${b}mm)</span>`;
     leg+=`<span><span class="legend-dot" style="background:#ecf0f1;border:1px solid #bbb">■</span> Tarpas (${g}mm)</span>`;
     if (dPasses>1) leg+=`<span><span class="legend-dot" style="background:#85c1e9">■</span> Tarpas tarp prafrezavimų (${g}mm)</span>`;
     leg+=`<span><span class="legend-dot" style="background:#2980b9;color:white">■</span> Likutis</span>`;
     legendEl.innerHTML=leg;
 
     const bgStr=Array.from({length:total},(_,i)=>i<total-1?`${b}+${g}+`:`${b}`).join('');
-    formulaEl.innerHTML=`<strong>Formulė:</strong><br>
+    formulaEl.innerHTML=`<strong>Skaičiavimas:</strong><br>
       ${likutis.toFixed(1)}  +  ${bgStr}  +  ${likutis.toFixed(1)}<br>
       <span style="color:#555">Išfrezuota: ${milled}mm &nbsp;|&nbsp; Likutis iš viso: ${(w-milled).toFixed(1)}mm</span><br>
       = <strong>${w}mm</strong>`;

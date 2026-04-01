@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Frezavimo skaičiuoklė</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: sans-serif;
+      background: #f5f6fa;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 24px 12px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 28px 24px;
+      max-width: 720px;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
+
+    .inputs {
+      background: #f0f4f8;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .divider { width: 1px; background: #ccc; align-self: stretch; }
+    .input-group { display: flex; flex-direction: column; gap: 4px; }
+    .input-group label { font-size: 13px; font-weight: bold; color: #444; }
+    .input-group .hint { font-size: 11px; color: #888; }
+    .input-row { display: flex; align-items: center; gap: 6px; }
+    .input-row input {
+      padding: 7px 10px; font-size: 16px; width: 80px;
+      border-radius: 8px; border: 2px solid #ccc; outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-row input:focus { border-color: #2980b9; }
+    .input-row .unit { font-size: 14px; color: #777; }
+
+    .correction-group { display: flex; flex-direction: column; gap: 4px; }
+    .correction-group label { font-size: 13px; font-weight: bold; color: #444; }
+    .correction-group .hint { font-size: 11px; color: #888; }
+    .correction-buttons { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+    .btn-corr {
+      width: 36px; height: 36px; font-size: 20px; font-weight: bold;
+      border: none; border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, transform 0.1s; user-select: none;
+    }
+    .btn-corr:active { transform: scale(0.92); }
+    .btn-minus { background: #c0392b; color: white; }
+    .btn-minus:hover:not(:disabled) { background: #a93226; }
+    .btn-plus  { background: #27ae60; color: white; }
+    .btn-plus:hover:not(:disabled)  { background: #229954; }
+    .btn-corr:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    .corr-value { min-width: 42px; text-align: center; font-size: 18px; font-weight: bold; color: #222; }
+
+    .info-strip {
+      background: #eaf4fb; border: 1px solid #aed6f1;
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 13px; color: #1a5276;
+      margin-bottom: 16px; display: none;
+    }
+    .info-strip.visible { display: block; }
+
+    .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
+    @media (max-width: 480px) { .stats { grid-template-columns: repeat(2,1fr); } }
+    .stat { border-radius: 10px; padding: 12px 8px; text-align: center; color: white; }
+    .stat .val    { font-size: 26px; font-weight: bold; }
+    .stat .unit-s { font-size: 11px; opacity: 0.85; }
+    .stat .lbl    { font-size: 12px; margin-top: 4px; line-height: 1.3; }
+
+    .schema-label { font-weight: bold; margin-bottom: 8px; font-size: 14px; }
+
+    /* Schema bar */
+    .schema-bar {
+      display: flex;
+      align-items: stretch;
+      border-radius: 8px;
+      border: 2px solid #bbb;
+      min-height: 46px;
+      overflow: hidden;
+    }
+    .seg {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: bold;
+      padding: 4px 1px; text-align: center;
+      white-space: nowrap; overflow: hidden;
+    }
+    .dots-seg {
+      display: flex; align-items: center; justify-content: center;
+      background: #dce1e7; color: #666;
+      font-size: 18px; letter-spacing: 3px;
+      padding: 0 8px; flex-shrink: 0;
+      border-left: 2px dashed #aaa;
+      border-right: 2px dashed #aaa;
+    }
+
+    .legend {
+      display: flex; gap: 14px; flex-wrap: wrap;
+      font-size: 13px; color: #555; margin-bottom: 16px; margin-top: 12px;
+    }
+    .legend-dot { display: inline-block; padding: 2px 8px; border-radius: 4px; margin-right: 4px; }
+
+    .formula {
+      background: #f8f9fa; border-radius: 8px; padding: 14px;
+      font-family: monospace; font-size: 13px;
+      word-break: break-all; line-height: 1.9;
+    }
+
+    .error {
+      background: #fdecea; border: 2px solid #c0392b;
+      color: #922b21; padding: 16px; border-radius: 10px;
+      font-size: 14px; line-height: 1.6; margin-bottom: 8px;
+    }
+
+    .result { display: none; }
+    .result.visible { display: block; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🔧 Frezavimo skaičiuoklė</h1>
+  <p class="subtitle">Freza: 4 peiliai | Prafrezavimai jungiami tarpu | Min. 1 pilnas prafrezavimas</p>
+
+  <div class="inputs">
+    <div class="input-group">
+      <label>Detalės plotis</label>
+      <div class="input-row">
+        <input type="number" id="plotis" placeholder="pvz. 100" min="0" step="any" oninput="calc()" />
+        <span class="unit">mm</span>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="input-group">
+      <label>Griovelio plotis</label>
+      <div class="input-row">
+        <input type="number" id="blade" value="5" min="0.1" step="any" oninput="calc()" />
+        <span class="unit">mm</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Tarpas</label>
+      <div class="input-row">
+        <input type="number" id="gap" value="7" min="0.1" step="any" oninput="calc()" />
+        <span class="unit">mm</span>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="correction-group">
+      <label>Korekcija</label>
+      <span class="hint">− didina likutį &nbsp;|&nbsp; + mažina likutį</span>
+      <div class="correction-buttons">
+        <button class="btn-corr btn-minus" id="btn-minus" onclick="changeCorr(-1)">−</button>
+        <div class="corr-value" id="corr-display">0</div>
+        <button class="btn-corr btn-plus"  id="btn-plus"  onclick="changeCorr(+1)">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-strip" id="info-strip"></div>
+
+  <div class="result" id="result">
+    <div class="stats" id="stats"></div>
+    <div id="error-box" class="error" style="display:none"></div>
+    <div id="schema-wrap" style="display:none">
+      <p class="schema-label">Vizuali schema:</p>
+      <!-- anchor div — its clientWidth tells us available pixels -->
+      <div id="schema-anchor" style="width:100%">
+        <div id="schema-container"></div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="formula" id="formula"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const BP = 4;
+  let correction = 0;
+  let lastRenderData = null;
+  let roObserver = null;
+
+  // ── pixel budget helpers ──────────────────────────────────────────
+  // Minimum px each segment type needs to be legible
+  const PX_BLADE = 20;   // "5"
+  const PX_GAP   = 20;   // "7"
+  const PX_DOTS  = 36;   // "···"
+
+  function edgePx(likutis) {
+    // width needed for edge label, e.g. "13.5" → ~36px
+    return Math.max(likutis.toFixed(1).length * 8 + 8, 28);
+  }
+
+  function minFullWidthPx(total, likutis) {
+    // total blades + (total-1) gaps + 2 edges
+    return 2 * edgePx(likutis) + total * PX_BLADE + (total - 1) * PX_GAP;
+  }
+
+  // ── segment HTML builders ─────────────────────────────────────────
+  function seg(bg, fg, label, flex) {
+    return `<div class="seg" style="background:${bg};color:${fg};flex:${Math.max(flex,1)}">${label}</div>`;
+  }
+
+  function bladeSegs(start, end, fullPassBlades, b, g, leadGap) {
+    let h = '';
+    for (let i = start; i < end; i++) {
+      if (i > start || leadGap) h += seg('#ecf0f1','#444', g, g);
+      const ex = i >= fullPassBlades;
+      h += seg(ex ? '#922b21' : '#c0392b', 'white', b, b);
+    }
+    return h;
+  }
+
+  function edgeSeg(likutis) {
+    return likutis > 0 ? seg('#2980b9','white', likutis.toFixed(1), Math.max(likutis,5)) : '';
+  }
+
+  // ── main schema renderer ──────────────────────────────────────────
+  function renderSchema(data) {
+    const { total, fullPassBlades, b, g, likutis } = data;
+    const anchor    = document.getElementById('schema-anchor');
+    const container = document.getElementById('schema-container');
+    if (!anchor || !container) return;
+
+    const availPx = anchor.clientWidth;
+    const needTrunc = minFullWidthPx(total, likutis) > availPx;
+
+    if (!needTrunc) {
+      // ── FULL view ──
+      let h = edgeSeg(likutis);
+      for (let i = 0; i < total; i++) {
+        if (i > 0) h += seg('#ecf0f1','#444', g, g);
+        const ex = i >= fullPassBlades;
+        h += seg(ex?'#922b21':'#c0392b','white', b, b);
+      }
+      h += edgeSeg(likutis);
+      container.innerHTML = `<div class="schema-bar">${h}</div>`;
+
+    } else {
+      // ── TRUNCATED view: 1 full pass each side ──
+      const leftEnd    = Math.min(BP, total);
+      const rightStart = Math.max(total - BP, leftEnd);
+
+      // Left half: edge + first pass (no trailing gap — dots separator handles it)
+      let leftH = edgeSeg(likutis) + bladeSegs(0, leftEnd, fullPassBlades, b, g, false);
+
+      // Right half: last pass + edge (no leading gap — dots handles it)
+      let rightH = bladeSegs(rightStart, total, fullPassBlades, b, g, false) + edgeSeg(likutis);
+
+      container.innerHTML = `
+        <div class="schema-bar">
+          <div style="display:flex;flex:1;min-width:0;overflow:hidden;align-items:stretch">${leftH}</div>
+          <div class="dots-seg">···</div>
+          <div style="display:flex;flex:1;min-width:0;overflow:hidden;align-items:stretch;justify-content:flex-end">${rightH}</div>
+        </div>`;
+    }
+  }
+
+  // ── ResizeObserver — fires on orientation change too ─────────────
+  function attachObserver() {
+    const anchor = document.getElementById('schema-anchor');
+    if (!anchor) return;
+    if (roObserver) roObserver.disconnect();
+    roObserver = new ResizeObserver(() => {
+      if (lastRenderData) renderSchema(lastRenderData);
+    });
+    roObserver.observe(anchor);
+  }
+
+  // ── utility ──────────────────────────────────────────────────────
+  function calcN(w,b,g) { return Math.floor((w+g)/(BP*(b+g))); }
+  function milledW(total,b,g) { return total<=0 ? 0 : total*b+(total-1)*g; }
+
+  function statHTML(val,unit,label,color) {
+    return `<div class="stat" style="background:${color}">
+      <div class="val">${val}</div><div class="unit-s">${unit}</div><div class="lbl">${label}</div>
+    </div>`;
+  }
+
+  function updateButtons(n) {
+    document.getElementById('btn-minus').disabled = correction<=-3 || (BP*n+correction)<=BP;
+    document.getElementById('btn-plus').disabled  = correction>=3;
+  }
+
+  function changeCorr(delta) {
+    const w=parseFloat(document.getElementById('plotis').value);
+    const b=parseFloat(document.getElementById('blade').value);
+    const g=parseFloat(document.getElementById('gap').value);
+    const n=(!isNaN(w)&&!isNaN(b)&&!isNaN(g))?calcN(w,b,g):0;
+    if (BP*n+correction+delta < BP) return;
+    correction = Math.max(-3, Math.min(3, correction+delta));
+    const v = correction;
+    document.getElementById('corr-display').textContent = v===0?'0':(v>0?'+'+v:''+v);
+    calc();
+  }
+
+  // ── main calc ─────────────────────────────────────────────────────
+  function calc() {
+    const w=parseFloat(document.getElementById('plotis').value);
+    const b=parseFloat(document.getElementById('blade').value);
+    const g=parseFloat(document.getElementById('gap').value);
+
+    const res       = document.getElementById('result');
+    const infoStrip = document.getElementById('info-strip');
+    const statsEl   = document.getElementById('stats');
+    const errorBox  = document.getElementById('error-box');
+    const schWrap   = document.getElementById('schema-wrap');
+    const legendEl  = document.getElementById('legend');
+    const formulaEl = document.getElementById('formula');
+
+    res.classList.remove('visible');
+    infoStrip.classList.remove('visible');
+    errorBox.style.display='none';
+    schWrap.style.display='none';
+    lastRenderData = null;
+
+    if (isNaN(w)||w<=0||isNaN(b)||b<=0||isNaN(g)||g<=0) return;
+
+    res.classList.add('visible');
+
+    const n      = calcN(w,b,g);
+    const total  = BP*n+correction;
+    const milled = milledW(total,b,g);
+    const tooWide = milled>w;
+    const tooFew  = total<BP;
+    const likutis = (!tooWide&&!tooFew) ? (w-milled)/2 : null;
+
+    updateButtons(n);
+
+    const dPasses = correction>=0 ? n     : n-1;
+    const dLines  = correction>=0 ? correction : BP+correction;
+
+    if (n>0) {
+      const txt = correction===0
+        ? `<strong>${dPasses}</strong> pilni prafrezavimai, be papildomų linijų`
+        : correction>0
+          ? `<strong>${dPasses}</strong> pilni prafrezavimai + <strong>${dLines}</strong> papildomos linijos`
+          : `Atimamas 1 prafrezavimas → <strong>${dPasses}</strong> pilni prafrezavimai + <strong>${dLines}</strong> papildomos linijos`;
+      infoStrip.innerHTML=`ℹ️ ${txt}`;
+      infoStrip.classList.add('visible');
+    }
+
+    statsEl.innerHTML =
+      statHTML(tooFew?'⚠️':dPasses,'prafrezavimai','Pilni prafrezavimai','#7d3c98') +
+      statHTML(tooFew?'⚠️':dLines, 'linijos',      'Papildomos linijos', '#c0392b') +
+      statHTML(
+        tooWide||tooFew?'⚠️':likutis.toFixed(2),
+        tooWide||tooFew?'':'mm',
+        'Likutis iš krašto',
+        tooWide||tooFew?'#c0392b':'#2980b9'
+      );
+
+    if (tooFew) {
+      errorBox.innerHTML=`<strong>⚠️ Per maža korekcija!</strong> Minimalus — <strong>1 pilnas prafrezavimas (${BP} grioveliai)</strong>. Sumažink korekciją.`;
+      errorBox.style.display='block'; return;
+    }
+    if (tooWide) {
+      errorBox.innerHTML=`<strong>⚠️ Per platu!</strong> Išfrezuojama <strong>${milled}mm</strong>, o detalė tik <strong>${w}mm</strong>. Viršijama per <strong>${(milled-w).toFixed(1)}mm</strong>.`;
+      errorBox.style.display='block'; return;
+    }
+
+    schWrap.style.display='block';
+
+    const fullPassBlades = BP*(correction>=0?n:n-1);
+    lastRenderData = { total, fullPassBlades, b, g, likutis };
+    renderSchema(lastRenderData);
+    attachObserver(); // attach after schema-anchor is visible
+
+    // Legend
+    let leg=`<span><span class="legend-dot" style="background:#c0392b;color:white">■</span> Griovelis – pilnas prafrezavimas (${b}mm)</span>`;
+    if (dLines>0) leg+=`<span><span class="legend-dot" style="background:#922b21;color:white">■</span> Griovelis – papildoma linija (${b}mm)</span>`;
+    leg+=`<span><span class="legend-dot" style="background:#ecf0f1;border:1px solid #bbb">■</span> Tarpas (${g}mm)</span>
+          <span><span class="legend-dot" style="background:#2980b9;color:white">■</span> Likutis</span>`;
+    legendEl.innerHTML=leg;
+
+    const bgStr=Array.from({length:total},(_,i)=>i<total-1?`${b}+${g}+`:`${b}`).join('');
+    formulaEl.innerHTML=`<strong>Formulė:</strong><br>
+      ${likutis.toFixed(1)}  +  ${bgStr}  +  ${likutis.toFixed(1)}<br>
+      <span style="color:#555">Išfrezuota: ${milled}mm &nbsp;|&nbsp; Likutis iš viso: ${(w-milled).toFixed(1)}mm</span><br>
+      = <strong>${w}mm</strong>`;
+  }
+
+  calc();
+</script>
+</body>
+</html>

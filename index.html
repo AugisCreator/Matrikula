@@ -34,7 +34,7 @@
       padding: 16px;
       display: flex;
       flex-wrap: wrap;
-      gap: 20px;
+      gap: 12px;
       align-items: flex-start;
       margin-bottom: 16px;
     }
@@ -44,11 +44,11 @@
     .input-group .hint { font-size: 11px; color: #888; }
     .input-row { display: flex; align-items: center; gap: 6px; }
     .input-row input {
-      padding: 7px 10px; font-size: 16px; width: 80px;
+      padding: 6px 8px; font-size: 15px; width: 52px;
       border-radius: 8px; border: 2px solid #ccc; outline: none;
       transition: border-color 0.2s;
     }
-    .input-row input.wide { width: 115px; }
+    .input-row input.wide { width: 72px; }
     .input-row input:focus { border-color: #2980b9; }
     .input-row .unit { font-size: 14px; color: #777; }
     input[type=number]::-webkit-outer-spin-button,
@@ -139,17 +139,16 @@
 <body>
 <div class="card">
   <h1>🔧 Frezavimo skaičiuoklė</h1>
-  <p class="subtitle">Freza: 4 peiliai | Prafrezavimai jungiami tarpu | Min. 1 pilnas prafrezavimas</p>
+  <p class="subtitle" id="subtitle">Freza: 4 peiliai | Prafrezavimai jungiami tarpu | Min. 1 pilnas prafrezavimas</p>
 
   <div class="inputs">
     <div class="input-group">
       <label>Detalė</label>
       <div class="input-row">
-        <input type="number" id="plotis" class="wide" placeholder="pvz. 100" min="0" step="any" oninput="calc()" />
+        <input type="number" id="plotis" class="wide" value="200" min="0" step="any" oninput="calc()" />
         <span class="unit">mm</span>
       </div>
     </div>
-    <div class="divider"></div>
     <div class="input-group">
       <label>Peilių sk.</label>
       <div class="input-row">
@@ -170,7 +169,6 @@
         <span class="unit">mm</span>
       </div>
     </div>
-    <div class="divider"></div>
     <div class="correction-group">
       <label>Korekcija</label>
       <span class="hint">− didina likutį &nbsp;|&nbsp; + mažina likutį</span>
@@ -359,6 +357,10 @@
     errorBox.style.display='none';
     schWrap.style.display='none';
     lastRenderData = null;
+
+    // Update subtitle
+    const subEl = document.getElementById('subtitle');
+    if (subEl) subEl.textContent = `Freza: ${getBP()} peiliai | Prafrezavimai jungiami tarpu | Min. 1 pilnas prafrezavimas`;
 
     if (isNaN(w)||w<=0||isNaN(b)||b<=0||isNaN(g)||g<=0) return;
 

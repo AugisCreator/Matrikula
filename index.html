@@ -145,7 +145,7 @@
     <div class="input-group">
       <label>Detalė</label>
       <div class="input-row">
-        <input type="number" id="plotis" class="wide" min="0" step="any" oninput="calc()" />
+        <input type="number" id="plotis" class="wide" min="0" step="any" oninput="resetCorr(); calc()" />
         <span class="unit">mm</span>
       </div>
     </div>
@@ -338,6 +338,11 @@
     const v = correction;
     document.getElementById('corr-display').textContent = v===0?'0':(v>0?'+'+v:''+v);
     calc();
+  }
+
+  function resetCorr() {
+    correction = 0;
+    document.getElementById('corr-display').textContent = '0';
   }
 
   // ── main calc ─────────────────────────────────────────────────────
